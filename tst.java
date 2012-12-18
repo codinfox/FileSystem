@@ -1,12 +1,14 @@
 package demo.Zhihao;
 
-import java.util.BitSet;
+import java.util.Scanner;
+
 
 public class tst {
 	public static void main(String[] args) {
-		Disk disk = Disk.getDefaultDisk();
-		Document document = new Document("hello");
-		if (document.save("hallo")) System.out.println("aa");
-		System.out.println(document.open());
+		Scanner scanner = new Scanner(System.in);
+		String dd = new String("dd");
+		StringBuffer str = new StringBuffer("asdf/dd/");
+		str.delete(str.length()-dd.length()-1, str.length());
+		System.out.println(str);
 	}
 }

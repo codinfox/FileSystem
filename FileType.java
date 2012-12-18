@@ -3,7 +3,6 @@ package demo.Zhihao;
 import java.io.Serializable;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.BitSet;
 import java.util.Date;
 
 abstract class FileType implements Serializable{
@@ -20,12 +19,12 @@ abstract class FileType implements Serializable{
 	}
 	public FileType()
 	{
-		SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss aa");
+		SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 		modifiedTime = createTime = format.format(new Date());
 	}
 	public void modify()
 	{
-		SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss aa");
+		SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 		modifiedTime = format.format(new Date());
 	}
 	public String getCreateTime()
@@ -35,12 +34,13 @@ abstract class FileType implements Serializable{
 	public String getModifiedTime() {
 		return modifiedTime;
 	}
+	public abstract void remove();
 }
 
-class Directory extends FileType {
+class Directory extends FileType implements Serializable{
 	private static final long serialVersionUID = -6446295381907151453L;
 
-	private ArrayList<FileType> directoryEntry = new ArrayList<FileType>();
+	private ArrayList<FileType> directoryEntries = new ArrayList<FileType>();
 	private Directory parentDirectory = null;
 	
 	public Directory(String name, Directory parent) {
@@ -49,57 +49,135 @@ class Directory extends FileType {
 		parentDirectory = parent;
 	}
 		
-	public ArrayList<FileType> getDirectory() {
-		return directoryEntry;
+	public ArrayList<FileType> getDirectoryEntries() {
+		return directoryEntries;
 	}
 	public void addDirectoryEntries(FileType entry){
-		directoryEntry.add(entry);
+		directoryEntries.add(entry);
 	}
 
 	public Directory getParentDirectory() {
 		return parentDirectory;
 	}
+	
+	public int numberOfObjects() {
+		return directoryEntries.size();
+	}
+	
+	public FileType containsFile(String name) {
+		for (FileType file : directoryEntries) {
+			if (file.getName().equals(name) && (file instanceof Document))
+				return file;
+		}
+		return null;
+	}
+	
+	public FileType containsDirectory(String name) {
+		for (FileType file : directoryEntries) {
+			if (file.getName().equals(name) && (file instanceof Directory))
+				return file;
+		}
+		return null;
+
+	}
+
+	@Override
+	public void remove() {
+		for (FileType file : directoryEntries) {
+			file.remove();
+		}
+		directoryEntries.clear();
+	}
 }
 
-class Document extends FileType {
+class Document extends FileType implements Serializable{
 	private static final long serialVersionUID = -8845790537229462381L;
+	static final char EOF = 0;
 	
-	private BitSet indexBitSet = new BitSet();
+	private ArrayList<Integer> blockIndex = new ArrayList<>();
+	private int _size = 0;
+	private int _blocks = 0;
 
 	public int size() {
-		return indexBitSet.cardinality();
+		return _size;
+	}
+	
+	public int block() {
+		return _blocks;
 	}
 	
 	public boolean save(String doc) {
 
-		if (doc.length() > indexBitSet.cardinality()) {
-			int[] tmp = Disk.getDefaultDisk().alloc(doc.length() - indexBitSet.cardinality());
+		int blockNeeded  = doc.length()/512 + ((doc.length()%512)==0?0:1);
+		int blockPresent = _size/512 + ((_size%512)==0?0:1);
+		
+		if (blockNeeded > blockPresent) {
+			
+			int[] tmp = Disk.getDefaultDisk().alloc(blockNeeded - blockPresent);
 			if (tmp != null)
 				for (int i : tmp)
-					indexBitSet.set(i);
+					blockIndex.add(i);
 			else return false;
-		} else if (doc.length() < indexBitSet.cardinality()) {
-			int[] tmp = new int[indexBitSet.cardinality() - doc.length()];
+		} else if (blockNeeded < blockPresent) {
+			int[] tmp = new int[blockPresent - blockNeeded];
 			for (int i = 0; i < tmp.length; i ++) {
-				tmp [i]= indexBitSet.nextSetBit((i>0?i-1:0));
-				indexBitSet.set(tmp[i], false);
+				tmp [i]= blockIndex.get(0);
+				blockIndex.remove(0);
 			}
 			Disk.getDefaultDisk().dealloc(tmp);
 		}
 		char[] content = doc.toCharArray();
-		for (int i = 0, idx = 0; i < content.length; i ++, idx++) {
-			Disk.getDefaultDisk().storage[idx = indexBitSet.nextSetBit(idx)] = content[i];
+		int len = doc.length();
+		for (int i = 0; i < blockIndex.size(); i++) {
+			if (len >= 512) {
+				for (int j = 0; j < 512; j++) {
+					Disk.getDefaultDisk().storage[blockIndex.get(i)*512 + j] = 
+							content[i*512+j];
+				}
+				len -= 512;
+			} else if (len < 512) {
+				for (int j = 0; j < len; j++) {
+					Disk.getDefaultDisk().storage[blockIndex.get(i)*512 + j] =
+							content[i*512+j];
+				}
+				Disk.getDefaultDisk().storage[blockIndex.get(i)*512 + len] = EOF;
+			}
 		}
+		
+		_size = doc.length();
+		_blocks = blockNeeded;
 		return true;
 	}
 	
 	public String open() {
-		char[] content = new char[indexBitSet.cardinality()];
-		for (int i = 0, idx = 0; i < indexBitSet.cardinality(); i++, idx++) {
-			content[i] = Disk.getDefaultDisk().storage[indexBitSet.nextSetBit(idx)];
+		char[] content = new char[_size];
+		for (int i = 0; i < blockIndex.size(); i++) {
+			if (i != (blockIndex.size()-1)) {
+				for (int j = 0; j < 512; j++) {
+					content[i*512 + j] = 
+							Disk.getDefaultDisk().storage[blockIndex.get(i)*512+j];
+				}
+			} else {
+				for (int j = 0; 
+						j < 512 && Disk.getDefaultDisk().storage[blockIndex.get(i)*512+j] != EOF;
+						j++) {
+					content[i*512 + j] = 
+							Disk.getDefaultDisk().storage[blockIndex.get(i)*512+j];
+				}
+			}
 		}
 		String contents = new String(content);
 		return contents;
+	}
+	
+	public void remove() {
+		int[] tmp = new int[blockIndex.size()];
+		for (int i = 0; i < blockIndex.size(); i++) {
+			tmp[i] = blockIndex.get(i);
+		}
+		Disk.getDefaultDisk().dealloc(tmp);
+		blockIndex.clear();
+		blockIndex = null;
 	}
 		
 	public Document(String name) {
