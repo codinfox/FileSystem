@@ -59,6 +59,7 @@ public class Notepad extends JFrame implements KeyListener, ActionListener {
 		this.add(menuBar, BorderLayout.NORTH);
 		this.add(scrollPane, BorderLayout.CENTER);
 		textArea.addKeyListener(this);
+		textArea.setLineWrap(true);
 		saveItem.addActionListener(this);
 		exitItem.addActionListener(this);
 	}

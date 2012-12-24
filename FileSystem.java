@@ -1,23 +1,25 @@
 package demo.Zhihao;
 
-import java.util.Scanner;
+import java.util.ArrayList;
 
 public class FileSystem {
 
 	private StringBuffer currentPath = new StringBuffer("/");
 	private Directory currentDirectory = null;
-
 	public String pwd() {
 		return currentPath.toString();
 	}
 	private void prompt() {
-		System.out.print("FileSys:~ user$ ".replaceFirst("~", pwd())); 
+		Terminal.getTerminal().print("FileSys:~ user$ ".replaceFirst("~", pwd())); 
+	}
+	public String prompt_pub() {
+		return "FileSys:~ user$ ".replaceFirst("~", pwd());
 	}
 	public void mkfs() {
 		Disk.getDefaultDisk().format();
 		currentDirectory = Disk.getDefaultDisk().getRootDirectory();
 		currentPath = new StringBuffer("/");
-		System.out.println("Success");
+		Terminal.getTerminal().println("Success");
 		System.gc();
 	}
 	public void ls() {
@@ -32,7 +34,7 @@ public class FileSystem {
 				filename = filename.concat("/");
 			}
 
-			System.out.println(content + "\t" +
+			Terminal.getTerminal().println(content + "\t" +
 					size + "\t" +
 					file.getCreateTime() + "\t" +
 					file.getModifiedTime() + "\t" +
@@ -41,15 +43,16 @@ public class FileSystem {
 	}
 	public boolean touch(String param) {
 		String vParam = param.substring(0, 
-				param.indexOf(' ') == -1 ? param.length() : param.charAt(-1));
+				param.indexOf(' ') == -1 ? param.length() : param.indexOf(' '));
 		if (vParam.length() == 0) {
-			System.out.println("touch: Wrong file name");
+			Terminal.getTerminal().println("touch: Wrong file name");
 			return false;
 		}
 		if (currentDirectory.containsDirectory(vParam) != null) {
-			System.out.println("touch: "+vParam+": is already taken");
+			Terminal.getTerminal().println("touch: "+vParam+": is already taken");
 			return false;
 		}
+		currentDirectory.modify();
 		FileType tmp = currentDirectory.containsFile(vParam); 
 		if (tmp != null) {
 			tmp.modify();
@@ -60,24 +63,24 @@ public class FileSystem {
 	}
 	public void mkdir(String param) {
 		String vParam = param.substring(0, 
-				param.indexOf(' ') == -1 ? param.length() : param.charAt(-1));
+				param.indexOf(' ') == -1 ? param.length() : param.indexOf(' '));
 		if (vParam.length() == 0) {
-			System.out.println("mkdir: Wrong file name");
+			Terminal.getTerminal().println("mkdir: Wrong file name");
 			return;
 		}
 		if (currentDirectory.containsFile(vParam) != null) {
-			System.out.println("touch: "+vParam+": is already taken");
+			Terminal.getTerminal().println("mkdir: "+vParam+": is already taken");
 			return;
 		}
 		FileType tmp = currentDirectory.containsDirectory(vParam); 
 		if (tmp != null)
-			System.out.println("mkdir: " + vParam + ": File exists");
+			Terminal.getTerminal().println("mkdir: " + vParam + ": File exists");
 		else
 			currentDirectory.addDirectoryEntries(new Directory(vParam, currentDirectory));
 	}
 	public void cd(String param) {
 		String vParam = param.substring(0, 
-				param.indexOf(' ') == -1 ? param.length() : param.charAt(-1));
+				param.indexOf(' ') == -1 ? param.length() : param.indexOf(' '));
 		if (vParam.length() == 0) {
 			return;
 		}		
@@ -106,7 +109,7 @@ public class FileSystem {
 		for (String s : params) {
 			tmpDirectory = (Directory)tmpDirectory.containsDirectory(s);
 			if (tmpDirectory == null) {
-				System.out.println("cd: "+vParam+": No such file or directory");
+				Terminal.getTerminal().println("cd: "+vParam+": No such file or directory");
 				return;
 			}
 		}
@@ -115,21 +118,21 @@ public class FileSystem {
 	}
 	public void cat(String param) {
 		String vParam = param.substring(0, 
-				param.indexOf(' ') == -1 ? param.length() : param.charAt(-1));
+				param.indexOf(' ') == -1 ? param.length() : param.indexOf(' '));
 		if (vParam.length() == 0) {
 			return;
 		}		
 		Document doc = (Document) currentDirectory.containsFile(vParam);
 		if (doc == null) {
-			System.out.println("cat: "+vParam+": No such file or directory");
+			Terminal.getTerminal().println("cat: "+vParam+": No such file or directory");
 			return;
 		}
-		System.out.println(doc.open());
+		Terminal.getTerminal().println(doc.open());
 	}
 	public void vi(String param) {
 		if (!touch(param)) return;
 		String vParam = param.substring(0, 
-				param.indexOf(' ') == -1 ? param.length() : param.charAt(-1));
+				param.indexOf(' ') == -1 ? param.length() : param.indexOf(' '));
 		if (vParam.length() == 0) { 
 			return;
 		}
@@ -141,7 +144,7 @@ public class FileSystem {
 	public void rm(String param) {
 		String[] params = param.split(" ");
 		if (params.length != 1 && params.length != 2) {
-			System.out.println("usage: rm [-r] file");
+			Terminal.getTerminal().println("usage: rm [-r] file");
 			return;
 		}
 		if (params.length == 2 && params[0].equals("-r")) {
@@ -150,83 +153,209 @@ public class FileSystem {
 				file.remove();
 				currentDirectory.getDirectoryEntries().remove(file);
 			} else {
-				System.out.println("rm: " + params[1] + ": No such file or directory");
+				Terminal.getTerminal().println("rm: " + params[1] + ": No such file or directory");
 			}
 			return;
 		}
 		if (params.length == 1) {
 			FileType document = (FileType) currentDirectory.containsFile(params[0]);
 			if (currentDirectory.containsDirectory(params[0]) != null) {
-				System.out.println("rm: "+ params[0] + ": is a directory");
+				Terminal.getTerminal().println("rm: "+ params[0] + ": is a directory");
 				return;
 			}
 			if (document == null) {
-				System.out.println("rm: " + params[0] + ": No such file or directory");
+				Terminal.getTerminal().println("rm: " + params[0] + ": No such file or directory");
 				return;
 			}
 			document.remove();
 			currentDirectory.getDirectoryEntries().remove(document);
+			currentDirectory.modify();
 		}
 	}
 	public void df() {
-		System.out.println("Blocks in use: \t" + Disk.getDefaultDisk().spaceUsed());
-		System.out.println("Blocks available: \t" + (Disk.DEFAULT_SPACE/512 - Disk.getDefaultDisk().spaceUsed()));
-		System.out.println("Space available: \t" +  (Disk.DEFAULT_SPACE - 512*Disk.getDefaultDisk().spaceUsed()));
+		Terminal.getTerminal().println("Blocks in use: \t\t" + Disk.getDefaultDisk().spaceUsed());
+		Terminal.getTerminal().println("Blocks available: \t" + (Disk.DEFAULT_SPACE/512 - Disk.getDefaultDisk().spaceUsed()));
+		Terminal.getTerminal().println("Space available: \t" +  (Disk.DEFAULT_SPACE - 512*Disk.getDefaultDisk().spaceUsed()));
 	}
-	public void cp() {
-		
-	}
-
-
-	public FileSystem() {
+	
+	public FileSystem(int i){
 		init();
-		//currentDirectory.addDirectoryEntries(new Document("aa"));
-		//currentDirectory.addDirectoryEntries(new Directory("bb", null));
-		System.out.println();
-		String cmd = new String();
-		Scanner scanner = new Scanner(System.in);
-		while (true) {
-			prompt();
-			cmd = scanner.nextLine();
-			cmd = cmd.trim();
-			String prefix = cmd.substring(0, 
-					(cmd.indexOf(' ')==-1?cmd.length():(cmd.indexOf(' '))));
-			String subfix = cmd.substring((cmd.indexOf(' ')==-1?cmd.length():(cmd.indexOf(' '))),
-					cmd.length());
-			subfix = subfix.trim();
+		Terminal.getTerminal().println("");
+		prompt();
+	}
 
-			if (prefix.equals("exit")) {
-				break;
-			} else if (prefix.equals("pwd")) {
-				System.out.println(pwd());
-			} else if (prefix.equals("mkfs")) {
-				mkfs();
-			} else if (prefix.equals("ls")) {
-				ls();
-			} else if (prefix.equals("touch")) {
-				touch(subfix);
-			} else if (prefix.equals("mkdir")) {
-				mkdir(subfix);
-			} else if (prefix.equals("cd")) {
-				cd(subfix);
-			} else if (prefix.equals("cat")) {
-				cat(subfix);
-			} else if (prefix.equals("vi")) {
-				vi(subfix);
-			} else if (prefix.equals("rm")) {
-				rm(subfix);
-			} else if (prefix.equals("df")) {
-				df();
+//	public FileSystem() {
+//		init();
+//		//currentDirectory.addDirectoryEntries(new Document("aa"));
+//		//currentDirectory.addDirectoryEntries(new Directory("bb", null));
+//		Terminal.getTerminal().println("");
+//		String cmd = new String();
+//		Scanner scanner = new Scanner(System.in);
+//		while (true) {
+//			prompt();
+//			cmd = scanner.nextLine();
+//			cmd = cmd.trim();
+//			String prefix = cmd.substring(0, 
+//					(cmd.indexOf(' ')==-1?cmd.length():(cmd.indexOf(' '))));
+//			String subfix = cmd.substring((cmd.indexOf(' ')==-1?cmd.length():(cmd.indexOf(' '))),
+//					cmd.length());
+//			subfix = subfix.trim();
+//
+//			if (prefix.equals("exit")) {
+//				break;
+//			} else if (prefix.equals("pwd")) {
+//				Terminal.getTerminal().println(pwd());
+//			} else if (prefix.equals("mkfs")) {
+//				mkfs();
+//			} else if (prefix.equals("ls")) {
+//				ls();
+//			} else if (prefix.equals("touch")) {
+//				touch(subfix);
+//			} else if (prefix.equals("mkdir")) {
+//				mkdir(subfix);
+//			} else if (prefix.equals("cd")) {
+//				cd(subfix);
+//			} else if (prefix.equals("cat")) {
+//				cat(subfix);
+//			} else if (prefix.equals("vi")) {
+//				vi(subfix);
+//			} else if (prefix.equals("rm")) {
+//				rm(subfix);
+//			} else if (prefix.equals("df")) {
+//				df();
+//			}
+//		}
+//		Disk.getDefaultDisk().writeHD();
+//	}
+
+	public Directory getCurrentDirectory() {
+		return currentDirectory;
+	}
+
+	public boolean command(String cmd) {
+		cmd = cmd.trim();
+		String prefix = cmd.substring(0, 
+				(cmd.indexOf(' ')==-1?cmd.length():(cmd.indexOf(' '))));
+		String subfix = cmd.substring((cmd.indexOf(' ')==-1?cmd.length():(cmd.indexOf(' '))),
+				cmd.length());
+		subfix = subfix.trim();
+
+		if (prefix.equals("pwd")) {
+			Terminal.getTerminal().println(pwd());
+		} else if (prefix.equals("mkfs")) {
+			mkfs();
+		} else if (prefix.equals("ls")) {
+			ls();
+		} else if (prefix.equals("touch")) {
+			touch(subfix);
+		} else if (prefix.equals("mkdir")) {
+			mkdir(subfix);
+		} else if (prefix.equals("cd")) {
+			cd(subfix);
+		} else if (prefix.equals("cat")) {
+			cat(subfix);
+		} else if (prefix.equals("vi")) {
+			vi(subfix);
+		} else if (prefix.equals("rm")) {
+			rm(subfix);
+		} else if (prefix.equals("df")) {
+			df();
+		} else if (prefix.equals("about")) {
+			Terminal.getTerminal().println("This is not a real terminal. By Li Zhihao");
+		} else if (prefix.equals("exit")) {
+			Disk.getDefaultDisk().writeHD();
+			return true;
+		}
+		prompt();
+		return false;
+	}
+
+	public String fillOut(String cmd) {
+		cmd = cmd.trim();
+		System.out.println(cmd);
+		String prefix = cmd.substring(0, 
+				(cmd.indexOf(' ')==-1?cmd.length():(cmd.indexOf(' '))));
+		String subfix = cmd.substring((cmd.indexOf(' ')==-1?cmd.length():(cmd.indexOf(' '))),
+				cmd.length());
+		subfix = subfix.trim();
+
+		if (subfix.length() == 0) {
+			ArrayList<String> tmp = new ArrayList<>();
+			if (prefix.length() == 0) {
+				Terminal.getTerminal().println("");
+				Terminal.getTerminal().println("Display all 12 posibilities");
+				Terminal.getTerminal().println("cat\tcd\tdf\nexit\tls\tmkdir\nmkfs\tpwd\trm\ntouch\tvi\tabout");
+				prompt();
+			} else {
+				if ("pwd".startsWith(prefix))
+					tmp.add("pwd");
+				if ("mkfs".startsWith(prefix))
+					tmp.add("mkfs");
+				if ("ls".startsWith(prefix))
+					tmp.add("ls");
+				if ("touch".startsWith(prefix))
+					tmp.add("touch");
+				if ("mkdir".startsWith(prefix))
+					tmp.add("mkdir");
+				if ("cd".startsWith(prefix))
+					tmp.add("cd");
+				if ("cat".startsWith(prefix))
+					tmp.add("cat");
+				if ("vi".startsWith(prefix))
+					tmp.add("vi");
+				if ("rm".startsWith(prefix))
+					tmp.add("rm");
+				if ("df".startsWith(prefix))
+					tmp.add("df");
+				if ("exit".startsWith(prefix))
+					tmp.add("exit");
+				if ("about".startsWith(prefix))
+					tmp.add("about");
+			}
+			if (tmp.size() == 1)
+				cmd = cmd.replaceFirst(prefix, tmp.get(0));
+			else if (tmp.size() > 1) {
+				Terminal.getTerminal().println("");
+				for (String s : tmp) {
+					Terminal.getTerminal().print(s + "\t");
+				}
+				Terminal.getTerminal().println("");
+				prompt();
+			}
+			return cmd;
+		} else {
+			String[] str = subfix.split(" ");
+			String trailing = str[str.length-1];
+			ArrayList<String> tmp = new ArrayList<>();
+			for (FileType file : currentDirectory.getDirectoryEntries()) {
+				if (file.getName().startsWith(trailing)) {
+					if (file instanceof Directory) 
+						tmp.add(file.getName()+"/");
+					else 
+						tmp.add(file.getName());
+				}
+			}
+			if (tmp.size() == 1) {
+				int last = cmd.lastIndexOf(' ');
+				String s = cmd.substring(0, last);
+				cmd = String.format("%s %s", s, tmp.get(0));
+				return cmd;
+			} else if (tmp.size() == 0) {
+				return null;
+			} else {
+				Terminal.getTerminal().println("");
+				for (String s : tmp) {
+					Terminal.getTerminal().print(s + "\t");
+				}
+				Terminal.getTerminal().println("");
+				prompt();
+				return cmd;
 			}
 		}
-		Disk.getDefaultDisk().writeHD();
 	}
+
 	private void init() {
 		Disk.init();
 		currentDirectory = Disk.getDefaultDisk().getRootDirectory();
-	}
-
-	public static void main(String[] args) {
-		new FileSystem();
 	}
 }

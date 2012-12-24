@@ -42,13 +42,13 @@ class Directory extends FileType implements Serializable{
 
 	private ArrayList<FileType> directoryEntries = new ArrayList<FileType>();
 	private Directory parentDirectory = null;
-	
+
 	public Directory(String name, Directory parent) {
 		super();
 		_name = name;
 		parentDirectory = parent;
 	}
-		
+
 	public ArrayList<FileType> getDirectoryEntries() {
 		return directoryEntries;
 	}
@@ -59,26 +59,31 @@ class Directory extends FileType implements Serializable{
 	public Directory getParentDirectory() {
 		return parentDirectory;
 	}
-	
+
 	public int numberOfObjects() {
 		return directoryEntries.size();
 	}
-	
-	public FileType containsFile(String name) {
-		for (FileType file : directoryEntries) {
-			if (file.getName().equals(name) && (file instanceof Document))
-				return file;
-		}
+
+	public Document containsFile(String name) {
+		FileType file = findItem(name);
+		if (file instanceof Document)
+			return (Document)file;
 		return null;
 	}
-	
-	public FileType containsDirectory(String name) {
+
+	public Directory containsDirectory(String name) {
+		FileType file = findItem(name);
+		if (file instanceof Directory)
+			return (Directory)file;
+		return null;
+	}
+
+	public FileType findItem(String name) {
 		for (FileType file : directoryEntries) {
-			if (file.getName().equals(name) && (file instanceof Directory))
+			if (file.getName().equals(name))
 				return file;
 		}
 		return null;
-
 	}
 
 	@Override
@@ -93,7 +98,7 @@ class Directory extends FileType implements Serializable{
 class Document extends FileType implements Serializable{
 	private static final long serialVersionUID = -8845790537229462381L;
 	static final char EOF = 0;
-	
+
 	private ArrayList<Integer> blockIndex = new ArrayList<>();
 	private int _size = 0;
 	private int _blocks = 0;
@@ -101,18 +106,18 @@ class Document extends FileType implements Serializable{
 	public int size() {
 		return _size;
 	}
-	
+
 	public int block() {
 		return _blocks;
 	}
-	
+
 	public boolean save(String doc) {
 
 		int blockNeeded  = doc.length()/512 + ((doc.length()%512)==0?0:1);
 		int blockPresent = _size/512 + ((_size%512)==0?0:1);
-		
+
 		if (blockNeeded > blockPresent) {
-			
+
 			int[] tmp = Disk.getDefaultDisk().alloc(blockNeeded - blockPresent);
 			if (tmp != null)
 				for (int i : tmp)
@@ -143,12 +148,12 @@ class Document extends FileType implements Serializable{
 				Disk.getDefaultDisk().storage[blockIndex.get(i)*512 + len] = EOF;
 			}
 		}
-		
+
 		_size = doc.length();
 		_blocks = blockNeeded;
 		return true;
 	}
-	
+
 	public String open() {
 		char[] content = new char[_size];
 		for (int i = 0; i < blockIndex.size(); i++) {
@@ -169,7 +174,7 @@ class Document extends FileType implements Serializable{
 		String contents = new String(content);
 		return contents;
 	}
-	
+
 	public void remove() {
 		int[] tmp = new int[blockIndex.size()];
 		for (int i = 0; i < blockIndex.size(); i++) {
@@ -179,7 +184,7 @@ class Document extends FileType implements Serializable{
 		blockIndex.clear();
 		blockIndex = null;
 	}
-		
+
 	public Document(String name) {
 		super();
 		_name = name;

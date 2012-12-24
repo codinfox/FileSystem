@@ -25,9 +25,9 @@ public final class Disk implements Serializable{
 			@SuppressWarnings("resource")
 			ObjectInputStream is = new ObjectInputStream(new FileInputStream(diskFile));
 			defaultDisk = (Disk)is.readObject();
-			System.out.println("Data has been restored from HD successfully.");
+			Terminal.getTerminal().println("Data has been restored from HD successfully.");
 		} catch (Exception e) {
-			System.out.println("Error: Disk record is either nonexistent or damaged, " +
+			Terminal.getTerminal().println("Error: Disk record is either nonexistent or damaged, " +
 					"a new record will be created.");
 			defaultDisk = new Disk();
 		}
@@ -41,9 +41,9 @@ public final class Disk implements Serializable{
 //			@SuppressWarnings("resource")
 //			ObjectInputStream is = new ObjectInputStream(new FileInputStream(diskFile));
 //			defaultDisk = (Disk)is.readObject();
-//			System.out.println("Data has been restored from HD successfully.");
+//			Terminal.getTerminal().println("Data has been restored from HD successfully.");
 //		} catch (Exception e) {
-//			System.out.println("Error: Disk record is either nonexistent or damaged, " +
+//			Terminal.getTerminal().println("Error: Disk record is either nonexistent or damaged, " +
 //					"a new record will be created.");
 //			defaultDisk = new Disk(0);
 //		}
@@ -87,7 +87,7 @@ public final class Disk implements Serializable{
 			os.flush();
 			os.close();
 		} catch (Exception e) {
-			System.out.println("Fatal Error: Data cannot be written to HD. " +
+			Terminal.getTerminal().println("Fatal Error: Data cannot be written to HD. " +
 					"All the data will be automatically abandoned.");
 		}
 	}
