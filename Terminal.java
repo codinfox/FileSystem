@@ -212,7 +212,8 @@ public class Terminal extends JFrame implements KeyListener {
 	public static void main(String[] args) {
 		getTerminal();
 		getTerminal().setEnabled(false);
-		getTerminal().setDelegate(new FileSystem(1));
+		FileSystem fs = new FileSystem(1);
+		getTerminal().setDelegate(fs);
 		getTerminal().setEnabled(true);
 	}
 }

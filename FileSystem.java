@@ -6,6 +6,7 @@ public class FileSystem {
 
 	private StringBuffer currentPath = new StringBuffer("/");
 	private Directory currentDirectory = null;
+	private FileSystemGUI xWindow = null;
 	public String pwd() {
 		return currentPath.toString();
 	}
@@ -14,6 +15,9 @@ public class FileSystem {
 	}
 	public String prompt_pub() {
 		return "FileSys:~ user$ ".replaceFirst("~", pwd());
+	}
+	public String path() {
+		return currentPath.toString();
 	}
 	public void mkfs() {
 		Disk.getDefaultDisk().format();
@@ -61,22 +65,56 @@ public class FileSystem {
 		currentDirectory.addDirectoryEntries(new Document(vParam));
 		return true;
 	}
-	public void mkdir(String param) {
+	public boolean touch_gui(String param) {
+		String vParam = param.substring(0, 
+				param.indexOf(' ') == -1 ? param.length() : param.indexOf(' '));
+		if (vParam.length() == 0) {
+			return false;
+		}
+		if (currentDirectory.containsDirectory(vParam) != null) {
+			return false;
+		}
+		currentDirectory.modify();
+		FileType tmp = currentDirectory.containsFile(vParam); 
+		if (tmp != null) {
+			return false;
+		}
+		currentDirectory.addDirectoryEntries(new Document(vParam));
+		return true;
+	}
+	public boolean mkdir(String param) {
 		String vParam = param.substring(0, 
 				param.indexOf(' ') == -1 ? param.length() : param.indexOf(' '));
 		if (vParam.length() == 0) {
 			Terminal.getTerminal().println("mkdir: Wrong file name");
-			return;
+			return false;
 		}
 		if (currentDirectory.containsFile(vParam) != null) {
 			Terminal.getTerminal().println("mkdir: "+vParam+": is already taken");
-			return;
+			return false;
 		}
 		FileType tmp = currentDirectory.containsDirectory(vParam); 
 		if (tmp != null)
 			Terminal.getTerminal().println("mkdir: " + vParam + ": File exists");
 		else
 			currentDirectory.addDirectoryEntries(new Directory(vParam, currentDirectory));
+		return true;
+	}
+	public boolean mkdir_gui(String param) {
+		String vParam = param.substring(0, 
+				param.indexOf(' ') == -1 ? param.length() : param.indexOf(' '));
+		if (vParam.length() == 0) {
+			return false;
+		}
+		if (currentDirectory.containsFile(vParam) != null) {
+			return false;
+		}
+		FileType tmp = currentDirectory.containsDirectory(vParam); 
+		if (tmp != null)
+			return false;
+		else
+			currentDirectory.addDirectoryEntries(new Directory(vParam, currentDirectory));
+		return true;
 	}
 	public void cd(String param) {
 		String vParam = param.substring(0, 
@@ -177,6 +215,17 @@ public class FileSystem {
 		Terminal.getTerminal().println("Blocks available: \t" + (Disk.DEFAULT_SPACE/512 - Disk.getDefaultDisk().spaceUsed()));
 		Terminal.getTerminal().println("Space available: \t" +  (Disk.DEFAULT_SPACE - 512*Disk.getDefaultDisk().spaceUsed()));
 	}
+	public void startx() {
+		if (xWindow == null) {
+			xWindow = FileSystemGUI.getFileSystemGUI();
+			xWindow.setDelegate(this);
+			xWindow.updates(currentDirectory);
+			xWindow.setVisible(true);
+		} else {
+			xWindow.updates(currentDirectory);
+			xWindow.setVisible(true);
+		}
+	}
 	
 	public FileSystem(int i){
 		init();
@@ -262,6 +311,8 @@ public class FileSystem {
 			df();
 		} else if (prefix.equals("about")) {
 			Terminal.getTerminal().println("This is not a real terminal. By Li Zhihao");
+		} else if (prefix.equals("startx&")) {
+			startx();
 		} else if (prefix.equals("exit")) {
 			Disk.getDefaultDisk().writeHD();
 			return true;
@@ -283,8 +334,8 @@ public class FileSystem {
 			ArrayList<String> tmp = new ArrayList<>();
 			if (prefix.length() == 0) {
 				Terminal.getTerminal().println("");
-				Terminal.getTerminal().println("Display all 12 posibilities");
-				Terminal.getTerminal().println("cat\tcd\tdf\nexit\tls\tmkdir\nmkfs\tpwd\trm\ntouch\tvi\tabout");
+				Terminal.getTerminal().println("Display all 13 posibilities");
+				Terminal.getTerminal().println("cat\tcd\tdf\nexit\tls\tmkdir\nmkfs\tpwd\trm\ntouch\tvi\tabout\nstartx&");
 				prompt();
 			} else {
 				if ("pwd".startsWith(prefix))
@@ -311,6 +362,8 @@ public class FileSystem {
 					tmp.add("exit");
 				if ("about".startsWith(prefix))
 					tmp.add("about");
+				if ("startx&".startsWith(prefix))
+					tmp.add("startx&");
 			}
 			if (tmp.size() == 1)
 				cmd = cmd.replaceFirst(prefix, tmp.get(0));

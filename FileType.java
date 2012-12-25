@@ -5,6 +5,8 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 
+import javax.swing.ImageIcon;
+
 abstract class FileType implements Serializable{
 	private static final long serialVersionUID = -4205386282975820009L;
 
@@ -35,6 +37,7 @@ abstract class FileType implements Serializable{
 		return modifiedTime;
 	}
 	public abstract void remove();
+	public abstract ImageIcon getIcon();
 }
 
 class Directory extends FileType implements Serializable{
@@ -92,6 +95,11 @@ class Directory extends FileType implements Serializable{
 			file.remove();
 		}
 		directoryEntries.clear();
+	}
+	
+	@Override
+	public ImageIcon getIcon() {
+		return new ImageIcon(getClass().getResource("folder.png"));
 	}
 }
 
@@ -188,5 +196,10 @@ class Document extends FileType implements Serializable{
 	public Document(String name) {
 		super();
 		_name = name;
+	}
+	
+	@Override
+	public ImageIcon getIcon() {
+		return new ImageIcon(getClass().getResource("file.png"));
 	}
 }
