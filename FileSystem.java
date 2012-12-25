@@ -48,7 +48,8 @@ public class FileSystem {
 	public boolean touch(String param) {
 		String vParam = param.substring(0, 
 				param.indexOf(' ') == -1 ? param.length() : param.indexOf(' '));
-		if (vParam.length() == 0) {
+		boolean valid = vParam.matches("[a-zA-Z_0-9]+");
+		if (!valid) {
 			Terminal.getTerminal().println("touch: Wrong file name");
 			return false;
 		}
@@ -85,7 +86,8 @@ public class FileSystem {
 	public boolean mkdir(String param) {
 		String vParam = param.substring(0, 
 				param.indexOf(' ') == -1 ? param.length() : param.indexOf(' '));
-		if (vParam.length() == 0) {
+		boolean valid = vParam.matches("[a-zA-Z_0-9]+");
+		if (!valid) {
 			Terminal.getTerminal().println("mkdir: Wrong file name");
 			return false;
 		}
